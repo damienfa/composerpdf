@@ -1,0 +1,19 @@
+{ 
+	"nom": { 
+		"type": "text", 
+		"position": { "x": 38, "y":134, "page":1 }, 
+		"size": {"width": 100, "height": 50}
+	},
+
+	"dayofbirth": { 
+		"type": "multicase", 
+		"position": { "x": 20, "y":20, "page":1 }, 
+		"size": {"width": 10, "height": 10, "spacing": 0, "nbmax": 2 }
+	},
+
+   "isadult": {
+    	"type": "cross",
+		"position": {"x": 86, "y":95, "page":1},
+		"size": 8
+	}
+}
