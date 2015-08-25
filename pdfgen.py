@@ -156,7 +156,7 @@ def fillForm():
 
 
 
-WorkingFolder="/data/Cerfa/PdfGenerator/data/"
+WorkingFolder=""
 #basePDF = "cerfa_1.pdf" #"cerfa_13750-05.pdf"
 baseConf = "ConfCerfa.json"
 cerfaFilled = "OutFilled.pdf"
