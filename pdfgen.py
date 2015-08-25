@@ -10,6 +10,7 @@ __author__ = 'mattguillouet & damien.fa'
 # champs multi-line
 # chained-fields
 # arguments input
+# add some comments in the console
 
 
 import os
@@ -24,7 +25,6 @@ from pdfrw import PdfReader, PdfWriter, PageMerge
 
 #######################################################################################"
 ############################ Classes
-
 class ConfigCross(object):
     x=0
     y=0
@@ -94,7 +94,6 @@ class Drawer:
 
 #######################################################################################"
 ############################ Functions
-
 def random_string(string_length=10):
     """Returns a random string of length string_length."""
     random = str(uuid.uuid4()) # Convert UUID format to a Python string.
@@ -119,42 +118,44 @@ def fillForm():
     # Loop on the page
     for ii in range(1,nbPage+1):
         for iData in dataJS:
-            value = dataJS[iData]
-            if ConfCerfaJS[iData]["type"]=="text": # the input is some simple text
-                conf = ConfigString(
-                    ConfCerfaJS[iData]["position"]["x"],
-                    ConfCerfaJS[iData]["position"]["y"]
-                )
-                width = ConfCerfaJS[iData]["size"]["width"]
-                # check the font size | if not ok decrease fon size until ok
-                if can.stringWidth(value,conf.font,conf.fontSize)>width:
-                    while can.stringWidth(value,conf.font,conf.fontSize)>width and conf.fontSizeMin<conf.fontSize:
-                        conf.fontSize-=1
+            if ConfCerfaJS[iData]["position"]["page"]==ii: #check if it is on this page
+                value = dataJS[iData]
+                if ConfCerfaJS[iData]["type"]=="text": # the input is some simple text
+                    conf = ConfigString(
+                        ConfCerfaJS[iData]["position"]["x"],
+                        ConfCerfaJS[iData]["position"]["y"]
+                    )
+                    width = ConfCerfaJS[iData]["size"]["width"]
+                    # check the font size | if not ok decrease fon size until ok
+                    if can.stringWidth(value,conf.font,conf.fontSize)>width:
+                        while can.stringWidth(value,conf.font,conf.fontSize)>width and conf.fontSizeMin<conf.fontSize:
+                            conf.fontSize-=1
 
-                drawer.drawbasicstring(value,conf)
+                    drawer.drawbasicstring(value,conf)
 
-            elif ConfCerfaJS[iData]["type"]=="multicase": # the input is some simple text
-                conf = ConfigCase(ConfCerfaJS[iData]["position"]["x"],ConfCerfaJS[iData]["position"]["y"],
-								  		ConfCerfaJS[iData]["size"]["width"],ConfCerfaJS[iData]["size"]["height"],
-								  			ConfCerfaJS[iData]["size"]["spacing"],ConfCerfaJS[iData]["size"]["nbmax"])
-                # check the font size
-                width = ConfCerfaJS[iData]["size"]["width"]
-                # check the font size | if not ok decrease fon size until ok
-                if can.stringWidth(value,conf.font,conf.fontSize)>width:
-                    while can.stringWidth(value[0].capitalize(),conf.font,conf.fontSize)>width and conf.fontSizeMin<conf.fontSize:
-                        conf.fontSize-=1
+                elif ConfCerfaJS[iData]["type"]=="multicase": # the input is some simple text
+                    conf = ConfigCase(ConfCerfaJS[iData]["position"]["x"],ConfCerfaJS[iData]["position"]["y"],
+                                            ConfCerfaJS[iData]["size"]["width"],ConfCerfaJS[iData]["size"]["height"],
+                                                ConfCerfaJS[iData]["size"]["spacing"],ConfCerfaJS[iData]["size"]["nbmax"])
+                    # check the font size
+                    width = ConfCerfaJS[iData]["size"]["width"]
+                    # check the font size | if not ok decrease fon size until ok
+                    if can.stringWidth(value,conf.font,conf.fontSize)>width:
+                        while can.stringWidth(value[0].capitalize(),conf.font,conf.fontSize)>width and conf.fontSizeMin<conf.fontSize:
+                            conf.fontSize-=1
 
-                drawer.drawmulticase(value,conf)
+                    drawer.drawmulticase(value,conf)
 
-            elif ConfCerfaJS[iData]["type"]=="cross":
-                if value==1:
-                    drawer.drawcross(ConfCerfaJS[iData]["position"]["x"],ConfCerfaJS[iData]["position"]["y"],ConfCerfaJS[iData]["size"])
+                elif ConfCerfaJS[iData]["type"]=="cross":
+                    if value==1:
+                        drawer.drawcross(ConfCerfaJS[iData]["position"]["x"],ConfCerfaJS[iData]["position"]["y"],ConfCerfaJS[iData]["size"])
 
         can.showPage() # go on next page of the pdf
     can.save()
 #end def fillform
 
-
+#########################################################################
+##################### Main
 
 WorkingFolder=""
 #basePDF = "cerfa_1.pdf" #"cerfa_13750-05.pdf"
@@ -198,7 +199,7 @@ f.close()
 for iData in dataJS:
     if not iData in  ConfCerfaJS:
         print("The field: " + iData + " has no defined configuration in the conf file")
-
+        # delete this entry if not bug
 
 ###############################################
 ###############################################
