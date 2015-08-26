@@ -1,5 +1,7 @@
 { 
-    "nom": "DUPONT",
-	"dayofbirth": "18/12/2015",
-	"isadult": 1
+  "nom": "DUPONT",
+  "dayOfBirth": "18",
+  "monthOfBirth": "18",
+  "isAdult": 1,
+  "dateOfBirth": "18052015"
 }

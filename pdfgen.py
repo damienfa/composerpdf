@@ -7,21 +7,20 @@ __author__ = 'mattguillouet & damien.fa'
 
 
 ######################## remaining
-# champs multi-line
-# chained-fields
-# arguments input
+# multi-line
+# input arg
 # add some comments in the console
-
 
 import os
 import json
 import uuid
 import sys
 import urllib.request
-from reportlab.pdfgen import canvas
 import reportlab.lib.pagesizes  as formatPage
-from pdfrw import PdfReader, PdfWriter, PageMerge
 
+from reportlab.pdfgen import canvas
+from pdfrw import PdfReader, PdfWriter, PageMerge
+from collections import OrderedDict
 
 #######################################################################################"
 ############################ Classes
@@ -73,18 +72,47 @@ class Drawer:
         self.can = canvas.Canvas(temp, pagesize=sizeCanvas)
         self.can.translate(0, sizeCanvas[1])
 
-    def drawbasicstring(self, string, config):
+    def routage(self, confEntry, val, which):
+        if which=="text":
+            conf = ConfigString(
+                confEntry["position"]["x"],
+                confEntry["position"]["y"])
+            width = confEntry["size"]["width"]
+            # check the font size | if not ok decrease font size until ok
+            while self.can.stringWidth(val,conf.font,conf.fontSize)>width and conf.fontSizeMin<conf.fontSize:
+                conf.fontSize-=1
+            self.draw_basicString(val,conf)
+
+        elif which=="multiCase":
+            conf = ConfigCase(confEntry["position"]["x"],confEntry["position"]["y"],
+                                            confEntry["size"]["width"],confEntry["size"]["height"],
+                                                confEntry["size"]["spacing"],confEntry["size"]["nbMax"])
+            # check the font size
+            width = confEntry["size"]["width"]
+            # check the font size | if not ok decrease font size until ok
+            while self.can.stringWidth(val[0].upper(),conf.font,conf.fontSize)>width and conf.fontSizeMin<conf.fontSize:
+                conf.fontSize-=1
+            self.draw_multiCase(val,conf)
+
+        elif which=="cross":
+            if val==1:
+                self.draw_cross(confEntry["position"]["x"],confEntry["position"]["y"],confEntry["size"])
+
+
+
+    def draw_basicString(self, string, config):
         self.can.setFont(config.font, config.fontSize)
         self.can.drawString(config.x, -config.y, string)
 
-    def drawmulticase(self, string, config):
-        self.can.setFont(config.font, config.fontSize)
+    def draw_multiCase(self, string, config):
         #check number max
-        for iChar in range(0,config.nbMax):
+        for iChar in range(0,min(config.nbMax,len(string))):
             conf = ConfigString(config.x+iChar*(config.width+config.spacing),config.y)
-            self.drawbasicstring(string[iChar],conf)
+            conf.font = config.font
+            conf.fontSize = config.fontSize
+            self.draw_basicString(string[iChar], conf)
 
-    def drawcross(self, x, y, size=10):
+    def draw_cross(self, x, y, size=10):
         x -= size*0.5;
         y += size*0.5;
         self.can.setLineWidth(2)
@@ -103,11 +131,10 @@ def random_string(string_length=10):
 
 
 def download_cerfa(urlCerfa, basepdf):
-
-	Response = urllib.request.urlopen(urlCerfa)
-	with open(basepdf, 'wb') as g:
-		g.write(Response.read())
-		g.close()
+    response = urllib.request.urlopen(urlCerfa)
+    with open(basepdf, 'wb') as g:
+	    g.write(response.read())
+	    g.close()
 
 
 def fillForm():
@@ -118,38 +145,31 @@ def fillForm():
     # Loop on the page
     for ii in range(1,nbPage+1):
         for iData in dataJS:
-            if ConfCerfaJS[iData]["position"]["page"]==ii: #check if it is on this page
+            if confCerfaJS[iData]["position"]["page"]==ii: # check if it is on this page
                 value = dataJS[iData]
-                if ConfCerfaJS[iData]["type"]=="text": # the input is some simple text
-                    conf = ConfigString(
-                        ConfCerfaJS[iData]["position"]["x"],
-                        ConfCerfaJS[iData]["position"]["y"]
-                    )
-                    width = ConfCerfaJS[iData]["size"]["width"]
-                    # check the font size | if not ok decrease fon size until ok
-                    if can.stringWidth(value,conf.font,conf.fontSize)>width:
-                        while can.stringWidth(value,conf.font,conf.fontSize)>width and conf.fontSizeMin<conf.fontSize:
-                            conf.fontSize-=1
+                if confCerfaJS[iData]["type"]=="text": # the input is some simple text
+                    drawer.routage(confCerfaJS[iData],value,"text")
 
-                    drawer.drawbasicstring(value,conf)
+                elif confCerfaJS[iData]["type"]=="multiCase": # the input is some multicase text
+                    drawer.routage(confCerfaJS[iData],value,"multiCase")
 
-                elif ConfCerfaJS[iData]["type"]=="multicase": # the input is some simple text
-                    conf = ConfigCase(ConfCerfaJS[iData]["position"]["x"],ConfCerfaJS[iData]["position"]["y"],
-                                            ConfCerfaJS[iData]["size"]["width"],ConfCerfaJS[iData]["size"]["height"],
-                                                ConfCerfaJS[iData]["size"]["spacing"],ConfCerfaJS[iData]["size"]["nbmax"])
-                    # check the font size
-                    width = ConfCerfaJS[iData]["size"]["width"]
-                    # check the font size | if not ok decrease fon size until ok
-                    if can.stringWidth(value,conf.font,conf.fontSize)>width:
-                        while can.stringWidth(value[0].capitalize(),conf.font,conf.fontSize)>width and conf.fontSizeMin<conf.fontSize:
-                            conf.fontSize-=1
+                elif confCerfaJS[iData]["type"]=="cross": # draw a cross
+                    drawer.routage(confCerfaJS[iData],value,"cross")
 
-                    drawer.drawmulticase(value,conf)
+                elif confCerfaJS[iData]["type"]=="chainedFields": # the input is chained fields
+                    nbChains =  len(confCerfaJS[iData]["fields"])
+                    iVal = 0
+                    x0 = confCerfaJS[iData]["position"]["x"]
+                    y0 = confCerfaJS[iData]["position"]["y"]
 
-                elif ConfCerfaJS[iData]["type"]=="cross":
-                    if value==1:
-                        drawer.drawcross(ConfCerfaJS[iData]["position"]["x"],ConfCerfaJS[iData]["position"]["y"],ConfCerfaJS[iData]["size"])
-
+                    for iChain in confCerfaJS[iData]["fields"].keys():
+                        chain = confCerfaJS[iData]["fields"][iChain]
+                        if chain["type"]=="multiCase":
+                            confCerfaJS[iData]["position"]["x"] = x0 + chain["delta"]["x"]
+                            confCerfaJS[iData]["position"]["y"] = y0 + chain["delta"]["y"]
+                            confCerfaJS[iData]["size"] = chain["size"]
+                            drawer.routage(confCerfaJS[iData], value[iVal:iVal+chain["nbChar"]],"multiCase")
+                            iVal += chain["nbChar"]
         can.showPage() # go on next page of the pdf
     can.save()
 #end def fillform
@@ -157,7 +177,7 @@ def fillForm():
 #########################################################################
 ##################### Main
 
-WorkingFolder=""
+WorkingFolder="./"
 #basePDF = "cerfa_1.pdf" #"cerfa_13750-05.pdf"
 baseConf = "ConfCerfa.json"
 cerfaFilled = "OutFilled.pdf"
@@ -178,32 +198,24 @@ temp = os.path.join(WorkingFolder, "temp-%s.pdf" % random_string() )
 
 # Lecture fichier conf des champs
 with open(os.path.join(WorkingFolder,baseConf),'r') as f:
-    ConfCerfaJS = json.loads(f.read())
+    confCerfaJS = json.loads(f.read(), object_pairs_hook=OrderedDict) # import the json Conf as an ordered dictionary
 f.close()
-#print(ConfCerfaJS)
-
-# Count how many pages are filled in
-nbPage = 0
-for iconfig in ConfCerfaJS:
-    if nbPage < ConfCerfaJS[iconfig]["position"]["page"]:
-        nbPage = ConfCerfaJS[iconfig]["position"]["page"]
-
 
 # Lecture data
 with open( WorkingFolder+fillDataFile,'r') as f:
-    dataJS = json.loads(f.read())
+    dataJS = json.loads(f.read(), object_pairs_hook=OrderedDict) # import the json data as an ordered dictionary
 f.close()
 
 
-# Checking and Error Handling
+# Checking that entries correspond
 for iData in dataJS:
-    if not iData in  ConfCerfaJS:
+    if not iData in  confCerfaJS:
         print("The field: " + iData + " has no defined configuration in the conf file")
-        # delete this entry if not bug
+        dataJS.pop(iData) # delete this entry
 
 ###############################################
 ###############################################
-# Open base cerfa to get the document size, we assume that all the pages have the same size
+# Get the document size, we assume that all the pages have the same size
 PdfIn = PdfReader(basePDF)
 ok = PdfIn.Root.Pages.Kids[0].MediaBox
 sizeCerfa = (float(ok[2]),float(ok[3]))
@@ -211,15 +223,22 @@ sizeCerfa = (float(ok[2]),float(ok[3]))
 ###############################################
 ###############################################
 # Remplissage Cerfa
+
+# Count how many pages are filled in
+nbPage = 0
+for iconfig in confCerfaJS:
+    if nbPage < confCerfaJS[iconfig]["position"]["page"]:
+        nbPage = confCerfaJS[iconfig]["position"]["page"]
+
 fillForm()
 
 #############################################################
 ####### Merge filled form and cerfa into one document #######
-new_pdf = PdfReader(temp)
+layersPdf = PdfReader(temp)
 
 for iPage in range(0,nbPage):
-    wmark = PageMerge().add(new_pdf.pages[iPage])[0]
-    PageMerge(PdfIn.getPage(iPage)).add(wmark).render()
+    cerfaLayer = PageMerge().add(layersPdf.pages[iPage])[0]
+    PageMerge(PdfIn.getPage(iPage)).add(cerfaLayer).render()
 
 PdfWriter().write(os.path.join(WorkingFolder,cerfaFilled), PdfIn)
 
