@@ -7,9 +7,7 @@ __author__ = 'mattguillouet & damien.fa'
 
 
 ######################## remaining
-# multi-line
-# input arg
-# add some comments in the console
+# input args
 
 import os
 import json
@@ -17,6 +15,8 @@ import uuid
 import sys
 import urllib.request
 import reportlab.lib.pagesizes  as formatPage
+import math
+import re
 
 from reportlab.pdfgen import canvas
 from pdfrw import PdfReader, PdfWriter, PageMerge
@@ -100,6 +100,8 @@ class Drawer:
 
 
 
+
+
     def draw_basicString(self, string, config):
         self.can.setFont(config.font, config.fontSize)
         self.can.drawString(config.x, -config.y, string)
@@ -147,17 +149,45 @@ def fillForm():
         for iData in dataJS:
             if confCerfaJS[iData]["position"]["page"]==ii: # check if it is on this page
                 value = dataJS[iData]
-                if confCerfaJS[iData]["type"]=="text": # the input is some simple text
+                if confCerfaJS[iData]["type"]=="text": # Simple text
                     drawer.routage(confCerfaJS[iData],value,"text")
 
-                elif confCerfaJS[iData]["type"]=="multiCase": # the input is some multicase text
+                elif confCerfaJS[iData]["type"]=="multiCase": #  Multicase text
                     drawer.routage(confCerfaJS[iData],value,"multiCase")
 
-                elif confCerfaJS[iData]["type"]=="cross": # draw a cross
+                elif confCerfaJS[iData]["type"]=="cross": # Cross
                     drawer.routage(confCerfaJS[iData],value,"cross")
 
-                elif confCerfaJS[iData]["type"]=="chainedFields": # the input is chained fields
-                    nbChains =  len(confCerfaJS[iData]["fields"])
+                elif confCerfaJS[iData]["type"]=="multiLine": # Multi-line text
+                    conf = ConfigString(0,0) #initialisation conf string
+                    widthCase = confCerfaJS[iData]["size"]["width"] # case width
+                    nbLineMax = confCerfaJS[iData]["size"]["nbLineMax"] # number max of line
+
+                    sizeFullString = can.stringWidth(value,conf.font,conf.fontSize)
+                    nbLineNeeded = math.floor(sizeFullString/widthCase) + 1
+                    while nbLineNeeded > nbLineMax and conf.fontSize > conf.fontSizeMin:
+                        conf.fontSize -= 1
+                        sizeFullString = can.stringWidth(value,conf.font,conf.fontSize)
+                        nbLineNeeded = math.floor(sizeFullString/widthCase) + 1
+
+                    beginLine = 0
+                    nbLine = 0
+                    previousWord = 0
+                    for w in re.finditer(" ",value):
+                        if can.stringWidth(value[beginLine:w.start()],conf.font,conf.fontSize) > widthCase:
+                            conf.x = confCerfaJS[iData]["position"]["x"]
+                            conf.y = confCerfaJS[iData]["position"]["y"] + nbLine*confCerfaJS[iData]["size"]["deltaLine"]
+                            drawer.draw_basicString(value[beginLine:previousWord],conf)
+                            nbLine += 1
+                            beginLine = previousWord + 1
+                        previousWord = w.start()
+
+                    conf.x = confCerfaJS[iData]["position"]["x"]
+                    conf.y = confCerfaJS[iData]["position"]["y"] + nbLine*confCerfaJS[iData]["size"]["deltaLine"]
+                    drawer.draw_basicString(value[beginLine:],conf)
+
+
+                elif confCerfaJS[iData]["type"]=="chainedFields": # Chained fields
                     iVal = 0
                     x0 = confCerfaJS[iData]["position"]["x"]
                     y0 = confCerfaJS[iData]["position"]["y"]
@@ -170,6 +200,7 @@ def fillForm():
                             confCerfaJS[iData]["size"] = chain["size"]
                             drawer.routage(confCerfaJS[iData], value[iVal:iVal+chain["nbChar"]],"multiCase")
                             iVal += chain["nbChar"]
+
         can.showPage() # go on next page of the pdf
     can.save()
 #end def fillform
@@ -191,11 +222,12 @@ fileName = fileName.split('.')[0]
 fileName += "-" + random_string() + ".pdf"
 basePDF = os.path.join(WorkingFolder,fileName)
 
+print("Downloading cerfa from: " + urlCerfa)
 download_cerfa(urlCerfa, basePDF)
 
 temp = os.path.join(WorkingFolder, "temp-%s.pdf" % random_string() )
 
-
+print("Reading configuration and data files")
 # Lecture fichier conf des champs
 with open(os.path.join(WorkingFolder,baseConf),'r') as f:
     confCerfaJS = json.loads(f.read(), object_pairs_hook=OrderedDict) # import the json Conf as an ordered dictionary
@@ -205,7 +237,6 @@ f.close()
 with open( WorkingFolder+fillDataFile,'r') as f:
     dataJS = json.loads(f.read(), object_pairs_hook=OrderedDict) # import the json data as an ordered dictionary
 f.close()
-
 
 # Checking that entries correspond
 for iData in dataJS:
@@ -217,8 +248,8 @@ for iData in dataJS:
 ###############################################
 # Get the document size, we assume that all the pages have the same size
 PdfIn = PdfReader(basePDF)
-ok = PdfIn.Root.Pages.Kids[0].MediaBox
-sizeCerfa = (float(ok[2]),float(ok[3]))
+sizePdf = PdfIn.Root.Pages.Kids[0].MediaBox
+sizeCerfa = (float(sizePdf[2]),float(sizePdf[3]))
 
 ###############################################
 ###############################################
@@ -230,6 +261,7 @@ for iconfig in confCerfaJS:
     if nbPage < confCerfaJS[iconfig]["position"]["page"]:
         nbPage = confCerfaJS[iconfig]["position"]["page"]
 
+print("Building the filled cerfa")
 fillForm()
 
 #############################################################
@@ -240,8 +272,8 @@ for iPage in range(0,nbPage):
     cerfaLayer = PageMerge().add(layersPdf.pages[iPage])[0]
     PageMerge(PdfIn.getPage(iPage)).add(cerfaLayer).render()
 
+print("Writing filled cerfa")
 PdfWriter().write(os.path.join(WorkingFolder,cerfaFilled), PdfIn)
-
 
 ##### Delete temp files
 os.remove(temp)

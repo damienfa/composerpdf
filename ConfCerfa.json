@@ -17,6 +17,12 @@
      "size": 8
    },
 
+  "address": {
+     "type": "multiLine",
+     "position": {"x":100, "y":200, "page":1},
+      "size": {"width": 110, "height": 40, "nbLineMax": 2, "deltaLine": 20 }
+   },
+
   "dateOfBirth":{
     "type": "chainedFields",
     "position": { "x": 168, "y":134, "page":1 },
