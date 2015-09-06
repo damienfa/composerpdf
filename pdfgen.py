@@ -6,8 +6,10 @@ __author__ = 'mattguillouet & damien.fa'
 #       -cerfa file (pdf)
 
 
-######################## remaining
+######################## Remaining
 # input args
+# integrate maxChar in the code
+# chained fields: handle text (possible ???)
 
 import os
 import json
@@ -17,6 +19,10 @@ import urllib.request
 import reportlab.lib.pagesizes  as formatPage
 import math
 import re
+
+#import reportlab.lib.utils
+#import reportlab.pdfbase.pdfmetrics
+
 
 from reportlab.pdfgen import canvas
 from pdfrw import PdfReader, PdfWriter, PageMerge
@@ -37,7 +43,7 @@ class ConfigCross(object):
 class ConfigString(object):
     x=0
     y=0
-    font="Helvetica"
+    font="Courier"
     fontSize=12
     fontSizeMin=6
 
@@ -52,8 +58,8 @@ class ConfigCase(object):
     height=0
     spacing=0
     nbMax=0
-    font="Helvetica"
-    fontSize=12
+    font="Courier"
+    fontSize=13
     fontSizeMin=6
 
     def __init__(self, x, y, width, height, spacing, nbMax):
@@ -78,6 +84,14 @@ class Drawer:
                 confEntry["position"]["x"],
                 confEntry["position"]["y"])
             width = confEntry["size"]["width"]
+
+            # optimalFontSize and minimalFontSize
+            if "optimalFontSize" in confEntry:
+                conf.fontSize = confEntry["optimalFontSize"]
+
+            if "minimalFontSize" in confEntry:
+                conf.fontSizeMin = confEntry["minimalFontSize"]
+
             # check the font size | if not ok decrease font size until ok
             while self.can.stringWidth(val,conf.font,conf.fontSize)>width and conf.fontSizeMin<conf.fontSize:
                 conf.fontSize-=1
@@ -89,6 +103,8 @@ class Drawer:
                                                 confEntry["size"]["spacing"],confEntry["size"]["nbMax"])
             # check the font size
             width = confEntry["size"]["width"]
+            # height = confEntry["size"]["height"]
+
             # check the font size | if not ok decrease font size until ok
             while self.can.stringWidth(val[0].upper(),conf.font,conf.fontSize)>width and conf.fontSizeMin<conf.fontSize:
                 conf.fontSize-=1
@@ -97,9 +113,6 @@ class Drawer:
         elif which=="cross":
             if val==1:
                 self.draw_cross(confEntry["position"]["x"],confEntry["position"]["y"],confEntry["size"])
-
-
-
 
 
     def draw_basicString(self, string, config):
@@ -187,6 +200,9 @@ def fillForm():
                     drawer.draw_basicString(value[beginLine:],conf)
 
 
+                    # reportlab.lib.utils.simpleSplit() test this function to split the lines
+
+
                 elif confCerfaJS[iData]["type"]=="chainedFields": # Chained fields
                     iVal = 0
                     x0 = confCerfaJS[iData]["position"]["x"]
@@ -200,6 +216,7 @@ def fillForm():
                             confCerfaJS[iData]["size"] = chain["size"]
                             drawer.routage(confCerfaJS[iData], value[iVal:iVal+chain["nbChar"]],"multiCase")
                             iVal += chain["nbChar"]
+
 
         can.showPage() # go on next page of the pdf
     can.save()
@@ -217,9 +234,7 @@ fillDataFile = "data.json"
 
 urlCerfa = "https://www.formulaires.modernisation.gouv.fr/gf/cerfa_13750.do"
 
-fileName = urlCerfa.split('/')[-1]
-fileName = fileName.split('.')[0]
-fileName += "-" + random_string() + ".pdf"
+fileName = os.path.split(urlCerfa)[1] + "-" + random_string() + ".pdf"
 basePDF = os.path.join(WorkingFolder,fileName)
 
 print("Downloading cerfa from: " + urlCerfa)
@@ -243,6 +258,7 @@ for iData in dataJS:
     if not iData in  confCerfaJS:
         print("The field: " + iData + " has no defined configuration in the conf file")
         dataJS.pop(iData) # delete this entry
+
 
 ###############################################
 ###############################################

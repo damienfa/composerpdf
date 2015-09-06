@@ -2,7 +2,10 @@
 	"nom": { 
       "type": "text",
       "position": { "x": 38, "y":134, "page":1 },
-      "size": {"width": 100, "height": 50}
+      "size": {"width": 100, "height": 50},
+      "maxChar": 100,
+      "optimalFontSize": 12,
+      "minimalFontSize": 10
 	},
 
 	"dayOfBirth": {
@@ -31,19 +34,19 @@
       "type": "multiCase",
       "delta": { "x":0, "y":0 },
       "nbChar": 2,
-      "size": {"width": 15, "height": 10, "spacing": 0, "nbMax": 2 }
+      "size": {"width": 14, "height": 10, "spacing": 0, "nbMax": 2 }
       },
     "month": {
       "type": "multiCase",
       "delta": { "x":31, "y":0 },
       "nbChar": 2,
-      "size": {"width": 15, "height": 10, "spacing": 0, "nbMax": 2 }
+      "size": {"width": 14, "height": 10, "spacing": 0, "nbMax": 2 }
       },
     "years": {
       "type": "multiCase",
       "delta": { "x":63, "y":0 },
       "nbChar": 4,
-      "size": {"width": 15, "height": 10, "spacing": 0, "nbMax": 4 }
+      "size": {"width": 14, "height": 10, "spacing": 0, "nbMax": 4 }
       }
     }
   }
